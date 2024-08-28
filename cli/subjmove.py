@@ -15,13 +15,13 @@ import getpass
 
 
  
-# def move_subject (id_subject, project_src, project_dest, changeprimary=True, label=None):
-def move_experiment (id_subject, id_experiment, project_src, project_dest, changeprimary=True, label=None):
+def move_exp_or_subj (id_subject, project_src, project_dest, id_experiment=None, changeprimary=True, label=None):
 
-    # primary
-    # query = f"/data/projects/{project_src}/subjects/{id_subject}/projects/{project_dest}"
-    # for 'move_experiment' - and would need additional 'id_experiment' varibale passed into method
-    query = f"/data/projects/{project_src}/subjects/{id_subject}/experiments/{id_experiment}/projects/{project_dest}"
+    if id_experiment is None:
+        # just work on subject
+        query = f"/data/projects/{project_src}/subjects/{id_subject}/projects/{project_dest}"
+    else:
+        query = f"/data/projects/{project_src}/subjects/{id_subject}/experiments/{id_experiment}/projects/{project_dest}"
 
     if changeprimary:
         query = query + "?primary=true"
@@ -136,7 +136,7 @@ with requests.sessions.Session() as connect:
         # print("working on",i)
         # expID = fields[i] # in this case I know it's only one. Could loop through a list.
         # print ("expID", expID)
-        # # queryexp = move_experiment(xnatID, expID, project_src, project_dest, changeprimary=True, label=None)
+        # # queryexp = move_exp_or_subj(xnatID, project_src, project_dest, id_experiment=expID, changeprimary=True, label=None)
 # 
         # # print(queryexp)
 # # not needed - pulls all the studies in a project
