@@ -114,7 +114,11 @@ with requests.sessions.Session() as connect:
 
     print (allsessions)
 
-    connect.close()
+    # Checking for experiments (sessions?) in a project ...
+    connect.base_url = f'{xnaturl}/data/projects/{project_src}/experiments'
+    experiments = connect.get(connect.base_url)
+
+    print ("\n*** Experiments/Sessions in %s are: %s" % (project_src, str(experiments.json()['ResultSet']['Result'])))
 
     # Get subject IDs
 # Do not use these
