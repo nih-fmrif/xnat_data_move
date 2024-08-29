@@ -59,13 +59,14 @@ def listsession(session,xnatid = None ,date = None):
     print(query)
 
     try:
+        # returns a dictionary with main key: 'ResultSet', and nested dictionary with main key: 'Result'
         result = session.get(query)
     except:
         print("there was an error connecting. please check credentials and if you have access to project")
         sys.exit()
 
-    # data = pd.DataFrame.from_dict(result.json()["ResultSet"]["Result"])
-    data = result.json()
+    # data = pd.DataFrame.from_dict(result.json()['ResultSet']['Result'])
+    data = result.json()['ResultSet']['Result']
 
     return data
 
