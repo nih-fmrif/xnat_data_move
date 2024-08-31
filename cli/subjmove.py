@@ -41,42 +41,6 @@ def move_exp_or_subj (id_subject, project_src, project_dest, id_experiment=None,
 
 
 
-def listsession(session,xnatid = None ,date = None):
-    columns = ''.join(('xnat:subjectData/label,',
-                       #'xnat:subjectData/ID,',
-                       'xnat:mrSessionData/label,',
-                       'xnat:mrSessionData/ID,',
-                       'xnat:mrSessionData/date,',
-                       'xnat:mrSessionData/project,',
-                       'URI,',
-                       'xnat:mrSessionData/UID'))
-
-    if xnatid == None:
-        query = f'{session.base_url}/experiments/?format=json&columns={columns}'
-    else:
-        query = f'{session.base_url}/subjects/{xnatid}/experiments/?format=json&columns={columns}'
-    
-    if date == "":
-        date = None
-    if date:
-        query = f'{query}&date={date}'
-
-    print(query)
-
-    try:
-        # returns a dictionary with main key: 'ResultSet', and nested dictionary with main key: 'Result'
-        result = session.get(query)
-    except:
-        print("there was an error connecting. please check credentials and if you have access to project")
-        sys.exit()
-
-    # data = pd.DataFrame.from_dict(result.json()['ResultSet']['Result'])
-    data = result.json()['ResultSet']['Result']
-
-    return data
-
-
-
 # Code that gets executed here
 user = getpass.getuser()
 print ("current user is {}".format(user))
@@ -117,15 +81,14 @@ with requests.sessions.Session() as connect:
     # print (allsessions)
 
     # Checking for experiments (sessions?) in a project ...
-    connect.base_url = f'{xnaturl}/data/projects/{project_src}/experiments?columns=date,label,xnat:subjectData/label,URI'
-
-    # If we also have DICOM session UID (like we do in real time meta data 'scan_' files), can also query on that UID with:
-    #
-    # connect.base_url = f'{xnaturl}/data/projects/{project_src}/experiments?columns=date,label,xnat:subjectData/label,URI&UID='
-    #
-    # Can also leave in place - and won't do anything right now, as we don't supply DICOM sessions UIDs.  But leave out, to be
-    # clear and explicit.
+    connect.base_url = f'{xnaturl}/data/projects/{project_src}/experiments?columns=date,label,xnat:subjectData/label,URI,xnat:mrSessionData/UID'
     experiments_all_in_proj = connect.get(connect.base_url)
+
+    # Other potential columns to query over:
+    # columns = ''.join(('xnat:mrSessionData/label,',
+                       # 'xnat:mrSessionData/ID,',
+                       # 'xnat:mrSessionData/date,',
+                       # 'xnat:mrSessionData/project,'))
 
     # print ("\n*** Experiments/Sessions in %s are: %s" % (project_src, str(experiments_all_in_proj.json()['ResultSet']['Result'])))
 
@@ -134,16 +97,9 @@ with requests.sessions.Session() as connect:
     for each_session in experiments_all_in_proj.json()['ResultSet']['Result']:
         print ("*** Now handlding session: " + str(each_session['label']) + " done on " + str(each_session['date'])
                                              + " for subject " + str(each_session['subject_label'])
-                                             + " for session " + str(each_session['session_ID']))
+                                             + " for session with DICOM UID " + str(each_session['xnat:mrsessiondata/uid']))
 
     # Get subject IDs
-# Do not use these
-#    scans = allsessions[allsessions['xnat:mrsessiondata/uid'].str.contains('|'.join(instances))]
-#    xnatID = scans["xnat:mrsessiondata/subject_id"].unique()
-#    xnatID = xnatID[0] # in this case I know it's only one. Could loop through a list.
-#    xnatID = scans["xnat:mrsessiondata/subject_id"].unique()
-#    xnatID = scans["xnat:mrsessiondata/label"].unique()
-#    print ("xnatID=",xnatID)
  
 # # Use this: this line assigns SubjectID to xnatID - comes from from first field in text file
     # xnatID = fields[1] # in this case I know it's only one. Could loop through a list.
