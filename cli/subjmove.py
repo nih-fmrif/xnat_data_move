@@ -117,7 +117,14 @@ with requests.sessions.Session() as connect:
     # print (allsessions)
 
     # Checking for experiments (sessions?) in a project ...
-    connect.base_url = f'{xnaturl}/data/projects/{project_src}/experiments?columns=date,label,xnat:subjectData/label,URI&UID='
+    connect.base_url = f'{xnaturl}/data/projects/{project_src}/experiments?columns=date,label,xnat:subjectData/label,URI'
+
+    # If we also have DICOM session UID (like we do in real time meta data 'scan_' files), can also query on that UID with:
+    #
+    # connect.base_url = f'{xnaturl}/data/projects/{project_src}/experiments?columns=date,label,xnat:subjectData/label,URI&UID='
+    #
+    # Can also leave in place - and won't do anything right now, as we don't supply DICOM sessions UIDs.  But leave out, to be
+    # clear and explicit.
     experiments_all_in_proj = connect.get(connect.base_url)
 
     # print ("\n*** Experiments/Sessions in %s are: %s" % (project_src, str(experiments_all_in_proj.json()['ResultSet']['Result'])))
@@ -126,7 +133,8 @@ with requests.sessions.Session() as connect:
     # should be the 'label' key in that dictionary, but there doesn't seem to be a 'subject' key, at least not immediately accessible
     for each_session in experiments_all_in_proj.json()['ResultSet']['Result']:
         print ("*** Now handlding session: " + str(each_session['label']) + " done on " + str(each_session['date'])
-                                             + " for subject " + str(each_session['subject_label']))
+                                             + " for subject " + str(each_session['subject_label'])
+                                             + " for session " + str(each_session['session_ID']))
 
     # Get subject IDs
 # Do not use these
