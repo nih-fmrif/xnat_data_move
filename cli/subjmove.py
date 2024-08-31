@@ -6,12 +6,17 @@
 Created on Fri Mar 15 09:40:58 2024
  
 @author: zugmana2
+
+Forked on 2024-08-28
+
+roopchansinghv
 """
  
 import requests
 import sys
 import warnings
 import getpass
+import csv
 
 
  
@@ -104,21 +109,23 @@ with requests.sessions.Session() as connect:
     response = connect.get(connect.base_url)
     if not response.ok:
         warnings.warn("You can't access xnat project {project_src} with the credenctials provided.")
-        sys.exit("Ending program")
+        connect.close()
+        sys.exit("Exiting program")
 
-    allsessions = listsession(connect)
+    # allsessions = listsession(connect)
 
-    #match by whatever
-    #lets say study instance uid
-    # instances = []
-
-    print (allsessions)
+    # print (allsessions)
 
     # Checking for experiments (sessions?) in a project ...
     connect.base_url = f'{xnaturl}/data/projects/{project_src}/experiments'
-    experiments = connect.get(connect.base_url)
+    experiments_all_in_proj = connect.get(connect.base_url)
 
-    print ("\n*** Experiments/Sessions in %s are: %s" % (project_src, str(experiments.json()['ResultSet']['Result'])))
+    # print ("\n*** Experiments/Sessions in %s are: %s" % (project_src, str(experiments_all_in_proj.json()['ResultSet']['Result'])))
+
+    # Set of experiments are returned in an 'array of dictionary' structures.  For each experiment/session, the experiment name/label
+    # should be the 'label' key in that dictionary, but there doesn't seem to be a 'subject' key, at least not immediately accessible
+    for each_session in experiments_all_in_proj.json()['ResultSet']['Result']:
+        print ("*** Now handlding session: " + str(each_session['label']) + " done on " + str(each_session['date']))
 
     # Get subject IDs
 # Do not use these
@@ -144,7 +151,7 @@ with requests.sessions.Session() as connect:
         # # queryexp = move_exp_or_subj(xnatID, project_src, project_dest, id_experiment=expID, changeprimary=True, label=None)
 # 
         # # print(queryexp)
-# # not needed - pulls all the studies in a project
+
 # #    for exp in expID:
         # r = connect.put(f"{xnaturl}{queryexp}")
         # if r.status_code == 200:
