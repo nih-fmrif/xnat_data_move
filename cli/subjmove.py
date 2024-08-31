@@ -93,7 +93,7 @@ with requests.sessions.Session() as connect:
     # print ("\n*** Experiments/Sessions in %s are: %s" % (project_src, str(experiments_all_in_proj.json()['ResultSet']['Result'])))
 
     # Set of experiments are returned in an 'array of dictionary' structures.  For each experiment/session, the experiment name/label
-    # should be the 'label' key in that dictionary, but there doesn't seem to be a 'subject' key, at least not immediately accessible
+    # should be the 'label' key in that dictionary, and subjects' ID should be available under 'subject_label' key.
     for each_session in experiments_all_in_proj.json()['ResultSet']['Result']:
         print ("*** Now handlding session: " + str(each_session['label']) + " done on " + str(each_session['date'])
                                              + " for subject " + str(each_session['subject_label'])
