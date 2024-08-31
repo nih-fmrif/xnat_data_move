@@ -117,7 +117,7 @@ with requests.sessions.Session() as connect:
     # print (allsessions)
 
     # Checking for experiments (sessions?) in a project ...
-    connect.base_url = f'{xnaturl}/data/projects/{project_src}/experiments'
+    connect.base_url = f'{xnaturl}/data/projects/{project_src}/experiments?columns=date,label,xnat:subjectData/label,URI&UID='
     experiments_all_in_proj = connect.get(connect.base_url)
 
     # print ("\n*** Experiments/Sessions in %s are: %s" % (project_src, str(experiments_all_in_proj.json()['ResultSet']['Result'])))
@@ -125,7 +125,8 @@ with requests.sessions.Session() as connect:
     # Set of experiments are returned in an 'array of dictionary' structures.  For each experiment/session, the experiment name/label
     # should be the 'label' key in that dictionary, but there doesn't seem to be a 'subject' key, at least not immediately accessible
     for each_session in experiments_all_in_proj.json()['ResultSet']['Result']:
-        print ("*** Now handlding session: " + str(each_session['label']) + " done on " + str(each_session['date']))
+        print ("*** Now handlding session: " + str(each_session['label']) + " done on " + str(each_session['date'])
+                                             + " for subject " + str(each_session['subject_label']))
 
     # Get subject IDs
 # Do not use these
