@@ -80,15 +80,21 @@ with requests.sessions.Session() as connect:
 
     # print (allsessions)
 
-    # Checking for experiments (sessions?) in a project ...
-    connect.base_url = f'{xnaturl}/data/projects/{project_src}/experiments?columns=date,label,xnat:subjectData/label,URI,xnat:mrSessionData/UID'
-    experiments_all_in_proj = connect.get(connect.base_url)
+    search_terms = ''.join(('date', ',',
+                            'label', ',',
+                            'xnat:subjectData/label,', ',',
+                            'URI', ',',
+                            'xnat:mrSessionData/UID,'))
 
-    # Other potential columns to query over:
-    # columns = ''.join(('xnat:mrSessionData/label,',
-                       # 'xnat:mrSessionData/ID,',
-                       # 'xnat:mrSessionData/date,',
-                       # 'xnat:mrSessionData/project,'))
+    # Other potential search terms to query over:
+    # search_terms = ''.join(('xnat:mrSessionData/label,', ',',
+                            # 'xnat:mrSessionData/date,', ',',
+                            # 'xnat:mrSessionData/project,'))
+
+    # Checking for experiments (sessions?) in a project ...
+    connect.base_url = f'{xnaturl}/data/projects/{project_src}/experiments?columns={search_terms}'
+    print ("********* Connecting base search URL is: " + str(connect.base_url))
+    experiments_all_in_proj = connect.get(connect.base_url)
 
     # print ("\n*** Experiments/Sessions in %s are: %s" % (project_src, str(experiments_all_in_proj.json()['ResultSet']['Result'])))
 
