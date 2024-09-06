@@ -44,6 +44,13 @@ def move_exp_or_subj (id_subject, project_src, project_dest, id_experiment=None,
 # Code execution flow starts here:
  
 # Parse 'projects.csv' CSV file to get XNAT host, and source and destination projects
+# Right now, the format of this file is just 2 fields per line, akin to a key-value
+# setup of a dictionary, but as a CSV.  For now, this file just needs to set 3 pairs
+# of values: xnat host, source project for the data being moved, and the destination
+# project to where the data will be moved.  Parsing is set up to be case-insensitive,
+# and will look for combinations of shorter words, instead of rigidly defined phrases.
+# Hopefully, this flexibility will not be abused ... ;)
+
 with open ('projects.csv') as projects_id_file:
    projects_and_host = csv.reader(projects_id_file) # can add delimiter=','
                                                     # but default seems fine.
