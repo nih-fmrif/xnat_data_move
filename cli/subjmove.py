@@ -41,17 +41,31 @@ def move_exp_or_subj (id_subject, project_src, project_dest, id_experiment=None,
 
 
 
-# Code that gets executed here
+# Code execution flow starts here:
+ 
+# Parse 'projects.csv' CSV file to get XNAT host, and source and destination projects
+with open ('projects.csv') as projects_id_file:
+   projects_and_host = csv.reader(projects_id_file) # can add delimiter=','
+                                                    # but default seems fine.
+   for row in projects_and_host:
+      if (len(row) > 1):
+         # remove white space, if used to improve readability
+         this_row_key   = row[0].replace(' ', '')
+         this_row_value = row[1].replace(' ', '')
+
+         if (('host' in this_row_key.lower()) and ('xnat' in this_row_key.lower())):
+            xnat_url = this_row_value
+         if (('proj' in this_row_key.lower()) and (('source' in this_row_key.lower()) or ('src' in this_row_key.lower()))):
+            project_src = this_row_value
+         if (('proj' in this_row_key.lower()) and ('dest' in this_row_key.lower())):
+            project_dest = this_row_value
+
+print ("XNAT host is: " + xnat_url + " src project is: " + project_src + " dest project is: " + project_dest)
+
 user = getpass.getuser()
 print ("current user is {}".format(user))
 password = getpass.getpass(prompt="Please enter Password : ")
- 
-xnaturl = 'https://fmrif-xnat.nimh.nih.gov'
-# This is the project where the data is currently located
-project_src  = "Enter-src-project-ID-here"
-# This is the new project where the data will be moved
-project_dest = "Enter-dest-project-ID-here"
- 
+
 # #read in file with studies to move
 # file = open('test3.txt')
 # # field[0] is SDAN number, field[1] is MRN, the remaining fields list MR session number
@@ -107,6 +121,13 @@ with requests.sessions.Session() as connect:
 
     # Get subject IDs
  
+    # Put in check for list of existing subjects in destination project here:
+    connect.base_url = f'{xnaturl}/data/projects/{project_src}/subjects?columns=label'
+    print ("********* Connecting base search URL is: " + str(connect.base_url))
+    subjects_in_dest_proj = connect.get(connect.base_url)
+    print("*** Subjects in destination project are: " + str(subjects_in_dest_proj.json()['ResultSet']['Result']))
+
+
 # # Use this: this line assigns SubjectID to xnatID - comes from from first field in text file
     # xnatID = fields[1] # in this case I know it's only one. Could loop through a list.
     # xnatLABEL = fields[1] # in this case I know it's only one. Could loop through a list.

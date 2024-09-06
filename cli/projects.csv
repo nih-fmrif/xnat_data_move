@@ -1,0 +1,5 @@
+
+xnat host,           https://xnat.host.name.here
+project source,      000-XXX-000
+project destination, 999-YYY-999
+
