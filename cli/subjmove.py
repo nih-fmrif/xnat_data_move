@@ -79,9 +79,9 @@ password = getpass.getpass(prompt="Please enter Password : ")
 with requests.sessions.Session() as connect:
    
     connect.auth = (user, password)
-    connect.xnaturl = xnaturl
+    connect.xnaturl = xnat_url
     connect.project = project_src
-    connect.base_url = f'{xnaturl}/data/projects/{project_src}'
+    connect.base_url = f'{xnat_url}/data/projects/{project_src}'
 
     # test connection
     response = connect.get(connect.base_url)
@@ -106,7 +106,7 @@ with requests.sessions.Session() as connect:
                             # 'xnat:mrSessionData/project,'))
 
     # Checking for experiments (sessions?) in a project ...
-    connect.base_url = f'{xnaturl}/data/projects/{project_src}/experiments?columns={search_terms}'
+    connect.base_url = f'{xnat_url}/data/projects/{project_src}/experiments?columns={search_terms}'
     print ("********* Connecting base search URL is: " + str(connect.base_url))
     experiments_all_in_proj = connect.get(connect.base_url)
 
@@ -122,7 +122,7 @@ with requests.sessions.Session() as connect:
     # Get subject IDs
  
     # Put in check for list of existing subjects in destination project here:
-    connect.base_url = f'{xnaturl}/data/projects/{project_src}/subjects?columns=label'
+    connect.base_url = f'{xnat_url}/data/projects/{project_src}/subjects?columns=label'
     print ("********* Connecting base search URL is: " + str(connect.base_url))
     subjects_in_dest_proj = connect.get(connect.base_url)
     print("*** Subjects in destination project are: " + str(subjects_in_dest_proj.json()['ResultSet']['Result']))
@@ -145,7 +145,7 @@ with requests.sessions.Session() as connect:
         # # print(queryexp)
 
 # #    for exp in expID:
-        # r = connect.put(f"{xnaturl}{queryexp}")
+        # r = connect.put(f"{xnat_url}{queryexp}")
         # if r.status_code == 200:
             # print("worked - moved " + xnatID + " " + expID + "from project to" + project_dest)
         # else :
