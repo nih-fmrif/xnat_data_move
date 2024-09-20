@@ -69,20 +69,33 @@ with open ('projects.csv') as projects_id_file:
 
 print ("XNAT host is: " + xnat_url + " src project is: " + project_src + " dest project is: " + project_dest)
 
+# Now, read in list of datasets to be queried for, and manipulated
+with open ('datasets.csv') as datasets_list_file:
+   datasets = csv.reader(datasets_list_file)
+
+   i = 0
+   search_terms = ''
+   for row in datasets:
+
+      if (len(row) > 0):
+         if (i == 0): # first row will have keys being search on
+            for j in range(len(row)):
+               search_terms += row[j].replace(' ', '')# remove white space, if used to improve readability
+
+               if (j < (len(row) - 1)):               # append commas to build list of items queried in XNAT
+                  search_terms += ','                 # except after last term
+
+         # else:   # for all other rows, read in to structure for each subject
+
+         i += 1
+
+   print ("Keys queried: " + search_terms)
+
 user = getpass.getuser()
 print ("current user is {}".format(user))
 password = getpass.getpass(prompt="Please enter Password : ")
 
-# #read in file with studies to move
-# file = open('test3.txt')
-# # field[0] is SDAN number, field[1] is MRN, the remaining fields list MR session number
-# for line in file:
-    # fields = line.strip().split()
-    # # Use this line for a subject with one study
-    # print("Working on these studies for",fields[0],"/",fields[1],":",fields[2])
-    # # Use this line for subject with 2 studies
-    # # print("Working on these studies for",fields[0],"/",fields[1],":",fields[2], fields[3])
- 
+# Log into XNAT instance 
 with requests.sessions.Session() as connect:
    
     connect.auth = (user, password)
@@ -97,34 +110,18 @@ with requests.sessions.Session() as connect:
         connect.close()
         sys.exit("Exiting program")
 
-    # allsessions = listsession(connect)
-
-    # print (allsessions)
-
-    search_terms = ''.join(('date', ',',
-                            'label', ',',
-                            'xnat:subjectData/label,', ',',
-                            'URI', ',',
-                            'xnat:mrSessionData/UID,'))
-
-    # Other potential search terms to query over:
-    # search_terms = ''.join(('xnat:mrSessionData/label,', ',',
-                            # 'xnat:mrSessionData/date,', ',',
-                            # 'xnat:mrSessionData/project,'))
-
-    # Checking for experiments (sessions?) in a project ...
+    # Checking for experiments (sessions?) in a project ... using search keys specified in 'datasets.csv'
+    # file, or other specified file, read in above
     connect.base_url = f'{xnat_url}/data/projects/{project_src}/experiments?columns={search_terms}'
     print ("********* Connecting base search URL is: " + str(connect.base_url))
     experiments_all_in_proj = connect.get(connect.base_url)
-
-    # print ("\n*** Experiments/Sessions in %s are: %s" % (project_src, str(experiments_all_in_proj.json()['ResultSet']['Result'])))
 
     # Set of experiments are returned in an 'array of dictionary' structures.  For each experiment/session, the experiment name/label
     # should be the 'label' key in that dictionary, and subjects' ID should be available under 'subject_label' key.
     for each_session in experiments_all_in_proj.json()['ResultSet']['Result']:
         print ("*** Now handlding session: " + str(each_session['label']) + " done on " + str(each_session['date'])
                                              + " for subject " + str(each_session['subject_label'])
-                                             + " for session with DICOM UID " + str(each_session['xnat:mrsessiondata/uid']))
+                                             + " for session with DICOM UID " + str(each_session['UID']))
 
     # Get subject IDs
  
@@ -141,7 +138,7 @@ with requests.sessions.Session() as connect:
  
 # # This now moves pairs of studies, not just moves one study at a time
 # # These 2 lines not used - replaced with entries from from fields 1-2 in text file
-# #    expID = scans["xnat:mrsessiondata/id"].to_list()
+# #    expID = scans["xnat:mrSessionData/id"].to_list()
 # #    print (expID)
     # for i in range(2,3):
         # print("working on",i)
