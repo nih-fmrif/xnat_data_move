@@ -43,6 +43,19 @@ def move_exp_or_subj (id_subject, project_src, project_dest, id_experiment=None,
 
 
 
+def createsubj (subjectid,sourceproject,label=None):
+
+    query = f"/data/projects/{sourceproject}/subjects/{subjectid}"
+
+    if label:
+        if query.endswith("true"):
+            query = query + f"&label={label}"
+        else :
+            query = query + f"?label={label}"
+    return query
+
+
+
 # Code execution flow starts here:
  
 # Parse 'projects.csv' CSV file to get XNAT host, and source and destination projects
