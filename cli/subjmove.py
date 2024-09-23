@@ -18,6 +18,8 @@ import warnings
 import getpass
 import csv
 
+import pandas
+
 
  
 def move_exp_or_subj (id_subject, project_src, project_dest, id_experiment=None, changeprimary=True, label=None):
@@ -75,12 +77,14 @@ with open ('datasets.csv') as datasets_list_file:
 
    i = 0
    search_terms = ''
+   search_keys  = []
    for row in datasets:
 
       if (len(row) > 0):
          if (i == 0): # first row will have keys being search on
             for j in range(len(row)):
                search_terms += row[j].replace(' ', '')# remove white space, if used to improve readability
+               search_keys.append(row[j].replace(' ', ''))
 
                if (j < (len(row) - 1)):               # append commas to build list of items queried in XNAT
                   search_terms += ','                 # except after last term
@@ -122,7 +126,6 @@ with requests.sessions.Session() as connect:
         print ("*** Now handlding session: " + str(each_session['label']) + " done on " + str(each_session['date'])
                                              + " for subject " + str(each_session['subject_label'])
                                              + " for session with DICOM UID " + str(each_session['UID']))
-
     # Get subject IDs
  
     # Put in check for list of existing subjects in destination project here:
