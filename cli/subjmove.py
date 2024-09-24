@@ -84,35 +84,21 @@ with open ('projects.csv') as projects_id_file:
 
 print ("XNAT host is: " + xnat_url + " src project is: " + project_src + " dest project is: " + project_dest)
 
+
+
 # Now, read in list of datasets to be queried for, and manipulated
-with open ('datasets.csv') as datasets_list_file:
-   datasets = csv.reader(datasets_list_file)
+read_in_data = pandas.read_csv('datasets.csv')
+search_terms = ','.join(read_in_data.columns.values.tolist())  # store column headers so they can be used for queries
+                                                               # and matched up with queried searches from database.
+print ("Keys queried: " + str(search_terms))
 
-   i = 0
-   search_terms = ''
-   search_keys  = []
-   for row in datasets:
 
-      if (len(row) > 0):
-         if (i == 0): # first row will have keys being search on
-            for j in range(len(row)):
-               search_terms += row[j].replace(' ', '')# remove white space, if used to improve readability
-               search_keys.append(row[j].replace(' ', ''))
 
-               if (j < (len(row) - 1)):               # append commas to build list of items queried in XNAT
-                  search_terms += ','                 # except after last term
-
-         # else:   # for all other rows, read in to structure for each subject
-
-         i += 1
-
-   print ("Keys queried: " + search_terms)
-
+# Log into XNAT instance
 user = getpass.getuser()
 print ("current user is {}".format(user))
 password = getpass.getpass(prompt="Please enter Password : ")
 
-# Log into XNAT instance 
 with requests.sessions.Session() as connect:
    
     connect.auth = (user, password)
@@ -135,17 +121,26 @@ with requests.sessions.Session() as connect:
 
     # Set of experiments are returned in an 'array of dictionary' structures.  For each experiment/session, the experiment name/label
     # should be the 'label' key in that dictionary, and subjects' ID should be available under 'subject_label' key.
-    for each_session in experiments_all_in_proj.json()['ResultSet']['Result']:
-        print ("*** Now handlding session: " + str(each_session['label']) + " done on " + str(each_session['date'])
-                                             + " for subject " + str(each_session['subject_label'])
-                                             + " for session with DICOM UID " + str(each_session['UID']))
+
+    # Read resulting JSON from 'connect' method directly into Pandas data frame.
+    source_proj_data = pandas.DataFrame(experiments_all_in_proj.json()['ResultSet']['Result'])
+
+    # and print the sets of data correspong to the types read in from the dataset CSV file
+    print("Data queried from source project are:\n" + str(source_proj_data[read_in_data.columns.values.tolist()]))
+
     # Get subject IDs
  
     # Put in check for list of existing subjects in destination project here:
     connect.base_url = f'{xnat_url}/data/projects/{project_src}/subjects?columns=label'
     print ("********* Connecting base search URL is: " + str(connect.base_url))
     subjects_in_dest_proj = connect.get(connect.base_url)
-    print("*** Subjects in destination project are: " + str(subjects_in_dest_proj.json()['ResultSet']['Result']))
+    # print("*** Subjects in destination project are: " + str(subjects_in_dest_proj.json()['ResultSet']['Result']))
+
+    subjects_in_dest_data_frame = pandas.DataFrame(subjects_in_dest_proj.json()['ResultSet']['Result'])
+
+    print("Subjects from source project are:\n" + str(subjects_in_dest_data_frame['label']))
+
+    # print("Data read in from file are:\n" + str(read_in_data))
 
 
 # # Use this: this line assigns SubjectID to xnatID - comes from from first field in text file
