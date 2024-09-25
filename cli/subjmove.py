@@ -90,6 +90,12 @@ print ("XNAT host is: " + xnat_url + " src project is: " + project_src + " dest 
 read_in_data = pandas.read_csv('datasets.csv', skipinitialspace=True)
 search_terms = ','.join(read_in_data.columns.values.tolist())  # store column headers so they can be used for queries
                                                                # and matched up with queried searches from database.
+
+# Convert subject ID to string, as in default case, their MRN shows up as an int
+# XNAT query returns the subject ID as a string, so make consistent with that.
+if ('subject_label' in search_terms):
+   read_in_data['subject_label'] = read_in_data['subject_label'].astype(str)
+
 print("Keys queried: " + str(search_terms))
 print("Data read in from file are:\n" + str(read_in_data[read_in_data.columns.values.tolist()]))
 
@@ -129,14 +135,14 @@ with requests.sessions.Session() as connect:
     # and print the sets of data correspong to the types read in from the dataset CSV file
     print("Data queried from source project are:\n" + str(project_data_src_df[read_in_data.columns.values.tolist()]))
 
-    # Now - repeat above steps, so we can also get a listing of data already in destination project
-    connect.base_url = f'{xnat_url}/data/projects/{project_dest}/experiments?columns={search_terms}'
-    print ("********* Connecting base search URL is: " + str(connect.base_url))
-    project_all_data_dest = connect.get(connect.base_url)
+    # # Now - repeat above steps, so we can also get a listing of data already in destination project
+    # connect.base_url = f'{xnat_url}/data/projects/{project_dest}/experiments?columns={search_terms}'
+    # print ("********* Connecting base search URL is: " + str(connect.base_url))
+    # project_all_data_dest = connect.get(connect.base_url)
 
-    project_data_dest_df = pandas.DataFrame(project_all_data_dest.json()['ResultSet']['Result'])
+    # project_data_dest_df = pandas.DataFrame(project_all_data_dest.json()['ResultSet']['Result'])
 
-    print("Data queried from destination project are:\n" + str(project_data_dest_df[read_in_data.columns.values.tolist()]))
+    # print("Data queried from destination project are:\n" + str(project_data_dest_df[read_in_data.columns.values.tolist()]))
 
     # So now we have (as data frames):
     #
@@ -146,6 +152,20 @@ with requests.sessions.Session() as connect:
     #
     # - read_in_data         == list of data, read in from file, to be transferred from
     #                           source to destination projects
+
+    # Testing for subject in source project - will eventually have to be done in destination
+    # project, as if the subject doesn't exist there, they will get created.  But since all
+    # data are in Pandas' DataFrames, the technique for checking should be the same.
+
+    # print("Subjects queried are: " + str(read_in_data['subject_label'].tolist()))
+
+    # print("Subjects in source are: " + str(project_data_src_df['subject_label'].tolist()))
+
+    for subject in read_in_data['subject_label'].tolist():
+        if (subject in project_data_src_df['subject_label'].tolist()):
+            print ("Subject %s already exists in %s project" % (subject, project_src))
+        else:
+            print ("Subject %s not in %s project. Needs to be created if moving data." % (subject, project_src))
 
     # I don't think we need the below any more, as with the queried data returned in a
     # data frame, we can just query down the column representing subject labels.
