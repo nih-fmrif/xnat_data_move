@@ -87,10 +87,11 @@ print ("XNAT host is: " + xnat_url + " src project is: " + project_src + " dest 
 
 
 # Now, read in list of datasets to be queried for, and manipulated
-read_in_data = pandas.read_csv('datasets.csv')
+read_in_data = pandas.read_csv('datasets.csv', skipinitialspace=True)
 search_terms = ','.join(read_in_data.columns.values.tolist())  # store column headers so they can be used for queries
                                                                # and matched up with queried searches from database.
-print ("Keys queried: " + str(search_terms))
+print("Keys queried: " + str(search_terms))
+print("Data read in from file are:\n" + str(read_in_data[read_in_data.columns.values.tolist()]))
 
 
 
@@ -101,9 +102,8 @@ password = getpass.getpass(prompt="Please enter Password : ")
 
 with requests.sessions.Session() as connect:
    
-    connect.auth = (user, password)
-    connect.xnaturl = xnat_url
-    connect.project = project_src
+    connect.auth     = (user, password)
+    connect.xnaturl  = xnat_url
     connect.base_url = f'{xnat_url}/data/projects/{project_src}'
 
     # test connection
@@ -117,30 +117,52 @@ with requests.sessions.Session() as connect:
     # file, or other specified file, read in above
     connect.base_url = f'{xnat_url}/data/projects/{project_src}/experiments?columns={search_terms}'
     print ("********* Connecting base search URL is: " + str(connect.base_url))
-    experiments_all_in_proj = connect.get(connect.base_url)
+    project_all_data_src = connect.get(connect.base_url)
 
-    # Set of experiments are returned in an 'array of dictionary' structures.  For each experiment/session, the experiment name/label
-    # should be the 'label' key in that dictionary, and subjects' ID should be available under 'subject_label' key.
+    # Set of experiments are returned in an 'array of dictionaries' structure. For each experiment/session,
+    # the experiment name/label # should be the 'label' key in that dictionary, and subjects' ID should be
+    # available under 'subject_label' key.
 
     # Read resulting JSON from 'connect' method directly into Pandas data frame.
-    source_proj_data = pandas.DataFrame(experiments_all_in_proj.json()['ResultSet']['Result'])
+    project_data_src_df = pandas.DataFrame(project_all_data_src.json()['ResultSet']['Result'])
 
     # and print the sets of data correspong to the types read in from the dataset CSV file
-    print("Data queried from source project are:\n" + str(source_proj_data[read_in_data.columns.values.tolist()]))
+    print("Data queried from source project are:\n" + str(project_data_src_df[read_in_data.columns.values.tolist()]))
 
-    # Get subject IDs
- 
-    # Put in check for list of existing subjects in destination project here:
-    connect.base_url = f'{xnat_url}/data/projects/{project_src}/subjects?columns=label'
+    # Now - repeat above steps, so we can also get a listing of data already in destination project
+    connect.base_url = f'{xnat_url}/data/projects/{project_dest}/experiments?columns={search_terms}'
     print ("********* Connecting base search URL is: " + str(connect.base_url))
-    subjects_in_dest_proj = connect.get(connect.base_url)
-    # print("*** Subjects in destination project are: " + str(subjects_in_dest_proj.json()['ResultSet']['Result']))
+    project_all_data_dest = connect.get(connect.base_url)
 
-    subjects_in_dest_data_frame = pandas.DataFrame(subjects_in_dest_proj.json()['ResultSet']['Result'])
+    project_data_dest_df = pandas.DataFrame(project_all_data_dest.json()['ResultSet']['Result'])
 
-    print("Subjects from source project are:\n" + str(subjects_in_dest_data_frame['label']))
+    print("Data queried from destination project are:\n" + str(project_data_dest_df[read_in_data.columns.values.tolist()]))
 
-    # print("Data read in from file are:\n" + str(read_in_data))
+    # So now we have (as data frames):
+    #
+    # - project_data_src_df  == data frame of data from source project
+    #
+    # - project_data_dest_df == data frame of data from destination  project
+    #
+    # - read_in_data         == list of data, read in from file, to be transferred from
+    #                           source to destination projects
+
+    # I don't think we need the below any more, as with the queried data returned in a
+    # data frame, we can just query down the column representing subject labels.
+
+    # # Get subject IDs
+
+    # # Put in check for list of existing subjects in destination project here:
+    # connect.base_url = f'{xnat_url}/data/projects/{project_src}/subjects?columns=label'
+    # print ("********* Connecting base search URL is: " + str(connect.base_url))
+    # subjects_in_dest_proj = connect.get(connect.base_url)
+    # # print("*** Subjects in destination project are: " + str(subjects_in_dest_proj.json()['ResultSet']['Result']))
+
+    # subjects_in_dest_data_frame = pandas.DataFrame(subjects_in_dest_proj.json()['ResultSet']['Result'])
+
+    # print("Subjects from source project are:\n" + str(subjects_in_dest_data_frame['label']))
+
+    # # print("Data read in from file are:\n" + str(read_in_data))
 
 
 # # Use this: this line assigns SubjectID to xnatID - comes from from first field in text file
