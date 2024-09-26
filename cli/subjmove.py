@@ -43,15 +43,16 @@ def move_exp_or_subj (id_subject, project_src, project_dest, id_experiment=None,
 
 
 
-def createsubj (subjectid,sourceproject,label=None):
+def build_create_subject_in_project_str(subject_id, project_id, label=None):
 
-    query = f"/data/projects/{sourceproject}/subjects/{subjectid}"
+    query = f"/data/projects/{project_id}/subjects/{subject_id}"
 
     if label:
         if query.endswith("true"):
             query = query + f"&label={label}"
         else :
             query = query + f"?label={label}"
+
     return query
 
 
@@ -135,14 +136,14 @@ with requests.sessions.Session() as connect:
     # and print the sets of data correspong to the types read in from the dataset CSV file
     print("Data queried from source project are:\n" + str(project_data_src_df[read_in_data.columns.values.tolist()]))
 
-    # # Now - repeat above steps, so we can also get a listing of data already in destination project
-    # connect.base_url = f'{xnat_url}/data/projects/{project_dest}/experiments?columns={search_terms}'
-    # print ("********* Connecting base search URL is: " + str(connect.base_url))
-    # project_all_data_dest = connect.get(connect.base_url)
+    # Now - repeat above steps, so we can also get a listing of data already in destination project
+    connect.base_url = f'{xnat_url}/data/projects/{project_dest}/experiments?columns={search_terms}'
+    print ("********* Connecting base search URL is: " + str(connect.base_url))
+    project_all_data_dest = connect.get(connect.base_url)
 
-    # project_data_dest_df = pandas.DataFrame(project_all_data_dest.json()['ResultSet']['Result'])
+    project_data_dest_df = pandas.DataFrame(project_all_data_dest.json()['ResultSet']['Result'])
 
-    # print("Data queried from destination project are:\n" + str(project_data_dest_df[read_in_data.columns.values.tolist()]))
+    print("Data queried from destination project are:\n" + str(project_data_dest_df[read_in_data.columns.values.tolist()]))
 
     # So now we have (as data frames):
     #
@@ -161,34 +162,30 @@ with requests.sessions.Session() as connect:
 
     # print("Subjects in source are: " + str(project_data_src_df['subject_label'].tolist()))
 
+    subjects_in_dest = project_data_dest_df['subject_label'].tolist()
     for subject in read_in_data['subject_label'].tolist():
-        if (subject in project_data_src_df['subject_label'].tolist()):
-            print ("Subject %s already exists in %s project" % (subject, project_src))
+        if (subject in subjects_in_dest):
+            print ("Subject %s already exists in %s project" % (subject, project_dest))
         else:
-            print ("Subject %s not in %s project. Needs to be created if moving data." % (subject, project_src))
+            print ("Subject %s not in %s project. Needs to be created if moving data." % (subject, project_dest))
 
-    # I don't think we need the below any more, as with the queried data returned in a
-    # data frame, we can just query down the column representing subject labels.
+            # Build ReST API string to create subject in destination project
+            subject_query = build_create_subject_in_project_str(subject, project_dest)
+            # print(subject_query)
 
-    # # Get subject IDs
+            # Now, connect to XNAT, and create the subject
+            r = connect.put(f"{xnat_url}{subject_query}")
+            # print("status code:"+str(r.status_code))
 
-    # # Put in check for list of existing subjects in destination project here:
-    # connect.base_url = f'{xnat_url}/data/projects/{project_src}/subjects?columns=label'
-    # print ("********* Connecting base search URL is: " + str(connect.base_url))
-    # subjects_in_dest_proj = connect.get(connect.base_url)
-    # # print("*** Subjects in destination project are: " + str(subjects_in_dest_proj.json()['ResultSet']['Result']))
+            if r.status_code == 201:
+                print("worked - created subject " + subject + " in project " + project_dest)
+                subjects_in_dest.append(subject)
+            else :
+                print("failed - check subject information for subject " + subject)
 
-    # subjects_in_dest_data_frame = pandas.DataFrame(subjects_in_dest_proj.json()['ResultSet']['Result'])
+        # At this point, the subject should be created in the destination project, so
+        # we should now be able to move session of data from source to destination.
 
-    # print("Subjects from source project are:\n" + str(subjects_in_dest_data_frame['label']))
-
-    # # print("Data read in from file are:\n" + str(read_in_data))
-
-
-# # Use this: this line assigns SubjectID to xnatID - comes from from first field in text file
-    # xnatID = fields[1] # in this case I know it's only one. Could loop through a list.
-    # xnatLABEL = fields[1] # in this case I know it's only one. Could loop through a list.
- 
 # # This now moves pairs of studies, not just moves one study at a time
 # # These 2 lines not used - replaced with entries from from fields 1-2 in text file
 # #    expID = scans["xnat:mrSessionData/id"].to_list()
