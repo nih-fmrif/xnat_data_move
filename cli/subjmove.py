@@ -97,8 +97,8 @@ search_terms = ','.join(read_in_data.columns.values.tolist())  # store column he
 if ('subject_label' in search_terms):
    read_in_data['subject_label'] = read_in_data['subject_label'].astype(str)
 
-print("Keys queried: " + str(search_terms))
-print("Data read in from file are:\n" + str(read_in_data[read_in_data.columns.values.tolist()]))
+print("Keys queried: " + search_terms)
+# print("Data read in from file are:\n" + str(read_in_data[read_in_data.columns.values.tolist()]))
 
 
 
@@ -179,6 +179,7 @@ with requests.sessions.Session() as connect:
 
             if r.status_code == 201:
                 print("worked - created subject " + subject + " in project " + project_dest)
+                # if subject successfully created in destination project, update list to reflect this
                 subjects_in_dest.append(subject)
             else :
                 print("failed - check subject information for subject " + subject)
