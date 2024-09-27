@@ -187,6 +187,9 @@ with requests.sessions.Session() as connect:
         # At this point, the subject should be created in the destination project, so
         # we should now be able to move session of data from source to destination.
 
+    for row, session in read_in_data.iterrows():
+        print("The label for this session of data is: " + str(session['label']))
+
 # # This now moves pairs of studies, not just moves one study at a time
 # # These 2 lines not used - replaced with entries from from fields 1-2 in text file
 # #    expID = scans["xnat:mrSessionData/id"].to_list()
