@@ -197,6 +197,19 @@ with requests.sessions.Session() as connect:
         # At this point, the subject should be created in the destination project, so
         # we should now be able to move session of data from source to destination.
 
+    for row_index, session in data_2_transfer.iterrows():
+
+        # print("The label for this session of data is: " + str(session['label']))
+
+        # Now, have to check for existence of session in source project.  Use either session label
+        # (usually MR Accession ID), or DICOM session UID for search, and try to do partial string
+        # matching
+
+        for src_row_index, src_session in project_data_src_df.iterrows():
+            if (session['label'].lower() in src_session['label']):
+                print("Sessions to match: " + str(session) + " *** AND *** " + str(src_session))
+                print("Session to move from source to dest: " + str(project_data_src_df.iloc[src_row_index]))
+
 
 # # This now moves pairs of studies, not just moves one study at a time
 # # These 2 lines not used - replaced with entries from from fields 1-2 in text file
