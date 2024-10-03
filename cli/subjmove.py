@@ -133,6 +133,16 @@ with requests.sessions.Session() as connect:
     # Read resulting JSON from 'connect' method directly into Pandas data frame.
     project_data_src_df = pandas.DataFrame(project_all_data_src.json()['ResultSet']['Result'])
 
+    # # One-off: write data frame to local csv, instead of repeatedly requesting from server
+    # project_data_src_df.to_csv('src_sessions.csv')
+    #
+    # # And then read that data from CSV file back in for testing
+    # project_data_src_df = pandas.read_csv('src_sessions.csv', skipinitialspace=True)
+
+    # Make sessions labels from source project lower case, and just take the MR accession ID, which
+    # can sometimes be joined with '-' to session name modifiers, in case duplicates are found.
+    project_data_src_df['label'] = project_data_src_df['label'].str.lower().str.split('-').str[0]
+
     # and print the sets of data correspong to the types read in from the dataset CSV file
     print("Data queried from source project are:\n" + str(project_data_src_df[data_2_transfer.columns.values.tolist()]))
 
