@@ -22,7 +22,7 @@ import pandas
 
 
  
-def move_exp_or_subj (id_subject, project_src, project_dest, id_experiment=None, changeprimary=True, label=None):
+def move_exp_or_subj (id_subject, project_src, project_dest, id_experiment=None, change_primary=True, label=None):
 
     if id_experiment is None:
         # just work on subject
@@ -30,7 +30,7 @@ def move_exp_or_subj (id_subject, project_src, project_dest, id_experiment=None,
     else:
         query = f"/data/projects/{project_src}/subjects/{id_subject}/experiments/{id_experiment}/projects/{project_dest}"
 
-    if changeprimary:
+    if change_primary:
         query = query + "?primary=true"
     if label:
         if query.endswith("true"):
@@ -121,7 +121,8 @@ with requests.sessions.Session() as connect:
 
     # Checking for experiments (sessions?) in a project ... using search keys specified in 'datasets.csv'
     # file, or other specified file, read in above
-    connect.base_url = f'{xnat_url}/data/projects/{project_src}/experiments?columns={search_terms}'
+    src_search_terms = search_terms + ',ID'
+    connect.base_url = f'{xnat_url}/data/projects/{project_src}/experiments?columns={src_search_terms}'
     print ("********* Connecting base search URL is: " + str(connect.base_url))
     project_all_data_src = connect.get(connect.base_url)
 
@@ -138,7 +139,7 @@ with requests.sessions.Session() as connect:
     # # And then read that data from CSV file back in for testing
     # project_data_src_df = pandas.read_csv('src_sessions.csv', skipinitialspace=True)
 
-    # # and print the sets of data correspong to the types read in from the dataset CSV file
+    # # and print the sets of data correspong to the types queried in from src project or read in from the dataset CSV file
     # print("Data queried from source project are:\n" + str(project_data_src_df[data_2_transfer.columns.values.tolist()]))
 
     # Now - repeat above steps, so we can also get a listing of data already in destination project
@@ -216,12 +217,12 @@ with requests.sessions.Session() as connect:
                         print("failed - check subject information for subject " + str(session['subject_label']))
 
                 # Now, should be able to move session data from source to destination:
-                # expID = scans["xnat:mrSessionData/id"].to_list()
-                # queryexp = move_exp_or_subj(xnatID, project_src, project_dest, id_experiment=expID, changeprimary=True, label=None)
+                session_id  = src_session['ID']
+                queryexp    = move_exp_or_subj(session['subject_label'], project_src, project_dest, id_experiment=session_id, change_primary=True, label=None)
 
-                # r = connect.put(f"{xnat_url}{queryexp}")
-                # if r.status_code == 200:
-                    # print("worked - moved " + xnatID + " " + expID + "from project to" + project_dest)
-                # else :
-                    # print("failed - check subject information for" + xnatID + " " + expID)
+                r = connect.put(f"{xnat_url}{queryexp}")
+                if r.status_code == 201:
+                    print("worked - moved " + session['subject_label'] + " " + session_id + " project to" + project_dest)
+                else :
+                    print("failed - check subject information for" + session['subject_label'] + " " + session_id)
  
