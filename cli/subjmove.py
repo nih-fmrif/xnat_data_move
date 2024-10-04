@@ -39,7 +39,6 @@ def move_exp_or_subj (id_subject, project_src, project_dest, id_experiment=None,
             query = query + f"?label={label}"
 
     return query
-    #PUT - /data/projects/{original-project-id}/subjects/{subject-id | subject-label}/projects/{shared-project-id}
 
 
 
@@ -83,7 +82,7 @@ with open ('projects.csv') as projects_id_file:
          if (('proj' in this_row_key.lower()) and ('dest' in this_row_key.lower())):
             project_dest = this_row_value
 
-print ("XNAT host is: " + xnat_url + " src project is: " + project_src + "; dest project is: " + project_dest)
+print ("XNAT host: " + xnat_url + "; src project: " + project_src + "; dest project: " + project_dest)
 
 
 
@@ -143,8 +142,8 @@ with requests.sessions.Session() as connect:
     # can sometimes be joined with '-' to session name modifiers, in case duplicates are found.
     project_data_src_df['label'] = project_data_src_df['label'].str.lower().str.split('-').str[0]
 
-    # and print the sets of data correspong to the types read in from the dataset CSV file
-    print("Data queried from source project are:\n" + str(project_data_src_df[data_2_transfer.columns.values.tolist()]))
+    # # and print the sets of data correspong to the types read in from the dataset CSV file
+    # print("Data queried from source project are:\n" + str(project_data_src_df[data_2_transfer.columns.values.tolist()]))
 
     # Now - repeat above steps, so we can also get a listing of data already in destination project
     connect.base_url = f'{xnat_url}/data/projects/{project_dest}/experiments?columns={search_terms}'
@@ -185,7 +184,7 @@ with requests.sessions.Session() as connect:
 
             # Now, connect to XNAT, and create the subject
             r = connect.put(f"{xnat_url}{subject_query}")
-            # print("status code:"+str(r.status_code))
+            # print("Subject creation status code: " + str(r.status_code))
 
             if r.status_code == 201:
                 print("worked - created subject " + subject + " in project " + project_dest)
@@ -194,8 +193,8 @@ with requests.sessions.Session() as connect:
             else :
                 print("failed - check subject information for subject " + subject)
 
-        # At this point, the subject should be created in the destination project, so
-        # we should now be able to move session of data from source to destination.
+    # At this point, the subject should be created in the destination project, so
+    # we should now be able to move session of data from source to destination.
 
     for row_index, session in data_2_transfer.iterrows():
 
