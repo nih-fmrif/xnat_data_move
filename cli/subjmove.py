@@ -138,10 +138,6 @@ with requests.sessions.Session() as connect:
     # # And then read that data from CSV file back in for testing
     # project_data_src_df = pandas.read_csv('src_sessions.csv', skipinitialspace=True)
 
-    # Make sessions labels from source project lower case, and just take the MR accession ID, which
-    # can sometimes be joined with '-' to session name modifiers, in case duplicates are found.
-    project_data_src_df['label'] = project_data_src_df['label'].str.lower().str.split('-').str[0]
-
     # # and print the sets of data correspong to the types read in from the dataset CSV file
     # print("Data queried from source project are:\n" + str(project_data_src_df[data_2_transfer.columns.values.tolist()]))
 
@@ -163,39 +159,23 @@ with requests.sessions.Session() as connect:
     # - data_2_transfer      == list of data, read in from file, to be transferred from
     #                           source to destination projects
 
-    # Testing for subject in source project - will eventually have to be done in destination
-    # project, as if the subject doesn't exist there, they will get created.  But since all
-    # data are in Pandas' DataFrames, the technique for checking should be the same.
+    # Make sessions labels from source project lower case, and just take the MR accession ID, which
+    # can sometimes be joined with '-' to session name modifiers, in case duplicates are found.
+    project_data_src_df['label'] = project_data_src_df['label'].str.lower().str.split('-').str[0]
+
+    # Before data can be moved from source to destination project, we need to check if that
+    # subject already exists in the destination.  If not - create.  This should be moved
+    # into loop that checks for matching sessions between the query list and the source, so
+    # that if no session exists in src (i.e. there's no data to move), then there's no need
+    # to create that subject.
 
     # print("Subjects queried are: " + str(data_2_transfer['subject_label'].tolist()))
 
     # print("Subjects in source are: " + str(project_data_src_df['subject_label'].tolist()))
 
     subjects_in_dest = project_data_dest_df['subject_label'].tolist()
-    for subject in data_2_transfer['subject_label'].tolist():
-        if (subject in subjects_in_dest):
-            print ("Subject %s already exists in %s project" % (subject, project_dest))
-        else:
-            print ("Subject %s not in %s project. Needs to be created if moving data." % (subject, project_dest))
 
-            # Build ReST API string to create subject in destination project
-            subject_query = build_create_subject_in_project_str(subject, project_dest)
-            # print(subject_query)
-
-            # Now, connect to XNAT, and create the subject
-            r = connect.put(f"{xnat_url}{subject_query}")
-            # print("Subject creation status code: " + str(r.status_code))
-
-            if r.status_code == 201:
-                print("worked - created subject " + subject + " in project " + project_dest)
-                # if subject successfully created in destination project, update list to reflect this
-                subjects_in_dest.append(subject)
-            else :
-                print("failed - check subject information for subject " + subject)
-
-    # At this point, the subject should be created in the destination project, so
-    # we should now be able to move session of data from source to destination.
-
+    # Iterate over the sessions to be transferred
     for row_index, session in data_2_transfer.iterrows():
 
         # print("The label for this session of data is: " + str(session['label']))
@@ -205,27 +185,43 @@ with requests.sessions.Session() as connect:
         # matching
 
         for src_row_index, src_session in project_data_src_df.iterrows():
-            if (session['label'].lower() in src_session['label']):
-                print("Sessions to match: " + str(session) + " *** AND *** " + str(src_session))
-                print("Session to move from source to dest: " + str(project_data_src_df.iloc[src_row_index]))
+            if ((session['label'].lower() in src_session['label']) and
+                (session['UID']           == src_session['UID'])   and
+                (session['subject_label'] == src_session['subject_label'])):
+                # print("Sessions to match: " + str(session) + " *** AND *** " + str(src_session))
+                # print("Session to move from source to dest: " + str(project_data_src_df.iloc[src_row_index]))
+                print("Matching sessions found with label: " + str(session['label']) + ", subject ID: " +
+                      session['subject_label'] + ", and UID: " + session['UID'])
 
+                # Check if subject already exists in destination project:
+                if (session['subject_label'] in subjects_in_dest):
+                    print ("Subject %s already exists in %s project" % (str(session['subject_label']), project_dest))
+                # and if not - create:
+                else:
+                    print ("Subject %s not in %s project. Creating to move their data." % (str(session['subject_label']), project_dest))
 
-# # This now moves pairs of studies, not just moves one study at a time
-# # These 2 lines not used - replaced with entries from from fields 1-2 in text file
-# #    expID = scans["xnat:mrSessionData/id"].to_list()
-# #    print (expID)
-    # for i in range(2,3):
-        # print("working on",i)
-        # expID = fields[i] # in this case I know it's only one. Could loop through a list.
-        # print ("expID", expID)
-        # # queryexp = move_exp_or_subj(xnatID, project_src, project_dest, id_experiment=expID, changeprimary=True, label=None)
-# 
-        # # print(queryexp)
+                    # Build ReST API string to create subject in destination project
+                    subject_query = build_create_subject_in_project_str(str(session['subject_label']), project_dest)
+                    # print(subject_query)
 
-# #    for exp in expID:
-        # r = connect.put(f"{xnat_url}{queryexp}")
-        # if r.status_code == 200:
-            # print("worked - moved " + xnatID + " " + expID + "from project to" + project_dest)
-        # else :
-            # print("failed - check subject information for" + xnatID + " " + expID)
+                    # Now, connect to XNAT, and create the subject
+                    r = connect.put(f"{xnat_url}{subject_query}")
+                    # print("Subject creation status code: " + str(r.status_code))
+
+                    if r.status_code == 201:
+                        print("worked - created subject " + str(session['subject_label']) + " in project " + project_dest)
+                        # if subject successfully created in destination project, update list to reflect this
+                        subjects_in_dest.append(session['subject_label'])
+                    else :
+                        print("failed - check subject information for subject " + str(session['subject_label']))
+
+                # Now, should be able to move session data from source to destination:
+                # expID = scans["xnat:mrSessionData/id"].to_list()
+                # queryexp = move_exp_or_subj(xnatID, project_src, project_dest, id_experiment=expID, changeprimary=True, label=None)
+
+                # r = connect.put(f"{xnat_url}{queryexp}")
+                # if r.status_code == 200:
+                    # print("worked - moved " + xnatID + " " + expID + "from project to" + project_dest)
+                # else :
+                    # print("failed - check subject information for" + xnatID + " " + expID)
  
