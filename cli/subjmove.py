@@ -164,15 +164,10 @@ with requests.sessions.Session() as connect:
     # can sometimes be joined with '-' to session name modifiers, in case duplicates are found.
     project_data_src_df['label'] = project_data_src_df['label'].str.lower().str.split('-').str[0]
 
-    # Before data can be moved from source to destination project, we need to check if that
-    # subject already exists in the destination.  If not - create.  This should be moved
-    # into loop that checks for matching sessions between the query list and the source, so
-    # that if no session exists in src (i.e. there's no data to move), then there's no need
-    # to create that subject.
-
-    # print("Subjects queried are: " + str(data_2_transfer['subject_label'].tolist()))
-
-    # print("Subjects in source are: " + str(project_data_src_df['subject_label'].tolist()))
+    # No need to create subjects in destination project if they don't already exist - the ReST API
+    # move will create the subject. However, the subject will still be 'owned' by the originating /
+    # source project, but the moved data set / experiment / session of MR data *** WILL *** belong
+    # to the destination project.  This is b/c of XNAT's core data models.
 
     subjects_in_dest = project_data_dest_df['subject_label'].tolist()
 
@@ -194,27 +189,27 @@ with requests.sessions.Session() as connect:
                 print("Matching sessions found with label: " + str(session['label']) + ", subject ID: " +
                       session['subject_label'] + ", and UID: " + session['UID'])
 
-                # Check if subject already exists in destination project:
-                if (session['subject_label'] in subjects_in_dest):
-                    print ("Subject %s already exists in %s project" % (str(session['subject_label']), project_dest))
-                # and if not - create:
-                else:
-                    print ("Subject %s not in %s project. Creating to move their data." % (str(session['subject_label']), project_dest))
+                # # Check if subject already exists in destination project:
+                # if (session['subject_label'] in subjects_in_dest):
+                    # print ("Subject %s already exists in %s project" % (str(session['subject_label']), project_dest))
+                # # and if not - create:
+                # else:
+                    # print ("Subject %s not in %s project. Creating to move their data." % (str(session['subject_label']), project_dest))
 
-                    # Build ReST API string to create subject in destination project
-                    subject_query = build_create_subject_in_project_str(str(session['subject_label']), project_dest)
-                    # print(subject_query)
+                    # # Build ReST API string to create subject in destination project
+                    # subject_query = build_create_subject_in_project_str(str(session['subject_label']), project_dest)
+                    # # print(subject_query)
 
-                    # Now, connect to XNAT, and create the subject
-                    r = connect.put(f"{xnat_url}{subject_query}")
-                    # print("Subject creation status code: " + str(r.status_code))
+                    # # Now, connect to XNAT, and create the subject
+                    # r = connect.put(f"{xnat_url}{subject_query}")
+                    # # print("Subject creation status code: " + str(r.status_code))
 
-                    if r.status_code == 201:
-                        print("worked - created subject " + str(session['subject_label']) + " in project " + project_dest)
-                        # if subject successfully created in destination project, update list to reflect this
-                        subjects_in_dest.append(session['subject_label'])
-                    else :
-                        print("failed - check subject information for subject " + str(session['subject_label']))
+                    # if r.status_code == 201:
+                        # print("worked - created subject " + str(session['subject_label']) + " in project " + project_dest)
+                        # # if subject successfully created in destination project, update list to reflect this
+                        # subjects_in_dest.append(session['subject_label'])
+                    # else :
+                        # print("failed - check subject information for subject " + str(session['subject_label']))
 
                 # Now, should be able to move session data from source to destination:
                 session_id  = src_session['ID']
