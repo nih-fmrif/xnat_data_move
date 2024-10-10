@@ -91,8 +91,9 @@ data_2_transfer = pandas.read_csv('datasets.csv', skipinitialspace=True)
 search_terms    = ','.join(data_2_transfer.columns.values.tolist())  # store column headers so they can be used for queries
                                                                      # and matched up with queried searches from database.
 
-# Convert subject ID to string, as in default case, their MRN shows up as an int
-# XNAT query returns the subject ID as a string, so make consistent with that.
+# Convert subject ID to string, as in default case, their MRN shows up as an int,
+# while an XNAT query returns the subject ID as a string, so make consistent with
+# that.
 if ('subject_label' in search_terms):
    data_2_transfer['subject_label'] = data_2_transfer['subject_label'].astype(str)
 
@@ -120,7 +121,7 @@ with requests.sessions.Session() as connect:
         sys.exit("Exiting program")
 
     # Checking for experiments (sessions?) in a project ... using search keys specified in 'datasets.csv'
-    # file, or other specified file, read in above
+    # file, or other specified file, read in above. Force to return session ID, if not already given.
     src_search_terms = search_terms + ',ID'
     connect.base_url = f'{xnat_url}/data/projects/{project_src}/experiments?columns={src_search_terms}'
     print ("********* Connecting base search URL is: " + str(connect.base_url))
@@ -160,6 +161,9 @@ with requests.sessions.Session() as connect:
     # - data_2_transfer      == list of data, read in from file, to be transferred from
     #                           source to destination projects
 
+    # Code up till this point should generalizable and flexible enough for the majority of use
+    # cases.  After this point, one should customize, based on CSV column labels.
+
     # Make sessions labels from source project lower case, and just take the MR accession ID, which
     # can sometimes be joined with '-' to session name modifiers, in case duplicates are found.
     project_data_src_df['label'] = project_data_src_df['label'].str.lower().str.split('-').str[0]
@@ -189,7 +193,7 @@ with requests.sessions.Session() as connect:
                 print("Matching sessions found with label: " + str(session['label']) + ", subject ID: " +
                       session['subject_label'] + ", and UID: " + session['UID'])
 
-                # # Check if subject already exists in destination project:
+                # # Check if subject already exists in destination project = no longer needed / used!!!
                 # if (session['subject_label'] in subjects_in_dest):
                     # print ("Subject %s already exists in %s project" % (str(session['subject_label']), project_dest))
                 # # and if not - create:
