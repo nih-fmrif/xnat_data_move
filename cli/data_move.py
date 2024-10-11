@@ -17,6 +17,7 @@ import sys
 import warnings
 import getpass
 import csv
+import logging
 
 import pandas
 
@@ -57,6 +58,10 @@ def build_create_subject_in_project_str(subject_id, project_id, label=None):
 
 
 # Code execution flow starts here:
+
+# Set up logging, instead of using print statements.
+logging.basicConfig(format='%(asctime)s %(message)s', datefmt='%Y_%m_%d %H:%M:%S', level=logging.WARNING)
+xnat_logger = logging.getLogger(__name__)
  
 # Parse 'projects.csv' CSV file to get XNAT host, and source and destination projects
 # Right now, the format of this file is just 2 fields per line, akin to a key-value
@@ -82,7 +87,7 @@ with open ('projects.csv') as projects_id_file:
          if (('proj' in this_row_key.lower()) and ('dest' in this_row_key.lower())):
             project_dest = this_row_value
 
-print ("XNAT host: " + xnat_url + "; src project: " + project_src + "; dest project: " + project_dest)
+xnat_logger.info("XNAT host: " + xnat_url + "; src project: " + project_src + "; dest project: " + project_dest)
 
 
 
@@ -97,13 +102,13 @@ search_terms    = ','.join(data_2_transfer.columns.values.tolist())  # store col
 if ('subject_label' in search_terms):
    data_2_transfer['subject_label'] = data_2_transfer['subject_label'].astype(str)
 
-print("Keys queried: " + search_terms)
+xnat_logger.debug("Keys queried: " + search_terms)
 
 
 
 # Log into XNAT instance
 user = getpass.getuser()
-print ("current user is {}".format(user))
+xnat_logger.debug("current user is {}".format(user))
 password = getpass.getpass(prompt="Please enter Password : ")
 
 with requests.sessions.Session() as connect:
@@ -123,7 +128,7 @@ with requests.sessions.Session() as connect:
     # file, or other specified file, read in above. XNAT's ID can be obtained from the experiment/session
     # URI, which can be split across '/', and the last field taken.
     connect.base_url = f'{xnat_url}/data/projects/{project_src}/experiments?columns={search_terms}'
-    print ("********* Connecting base search URL is: " + str(connect.base_url))
+    xnat_logger.debug("********* Connecting base search URL is: " + str(connect.base_url))
     project_all_data_src = connect.get(connect.base_url)
 
     # Set of experiments are returned in an 'array of dictionaries' structure. For each experiment/session,
@@ -139,17 +144,17 @@ with requests.sessions.Session() as connect:
     # # And then read that data from CSV file back in for testing
     # project_data_src_df = pandas.read_csv('src_sessions.csv', skipinitialspace=True)
 
-    # # and print the sets of data correspong to the types queried in from src project or read in from the dataset CSV file
-    # print("Data queried from source project are:\n" + str(project_data_src_df[data_2_transfer.columns.values.tolist()]))
+    # and print the sets of data correspong to the types queried in from src project or read in from the dataset CSV file
+    xnat_logger.debug("Data queried from source project are:\n" + str(project_data_src_df[data_2_transfer.columns.values.tolist()]))
 
     # Now - repeat above steps, so we can also get a listing of data already in destination project
     connect.base_url = f'{xnat_url}/data/projects/{project_dest}/experiments?columns={search_terms}'
-    # print ("********* Connecting base search URL is: " + str(connect.base_url))
+    xnat_logger.debug("********* Connecting base search URL is: " + str(connect.base_url))
     project_all_data_dest = connect.get(connect.base_url)
 
     project_data_dest_df = pandas.DataFrame(project_all_data_dest.json()['ResultSet']['Result'])
 
-    # print("Data queried from destination project are:\n" + str(project_data_dest_df[data_2_transfer.columns.values.tolist()]))
+    xnat_logger.debug("Data queried from destination project are:\n" + str(project_data_dest_df[data_2_transfer.columns.values.tolist()]))
 
     # So now we have (as data frames):
     #
@@ -186,15 +191,15 @@ with requests.sessions.Session() as connect:
 
         # Match on session IDs
         if (str(session_2_move['label_y']).lower() in str(session_2_move['label_x']).lower()):
-            print("Session label %s from data query also matches with session %s in source project. Moving from source to destination." %
-                  (str(session_2_move['label_y']), str(session_2_move['label_x'])))
+            xnat_logger.info("Session label %s from data query also matches with session %s in source project. Moving from source to destination." %
+                             (str(session_2_move['label_y']), str(session_2_move['label_x'])))
 
             # Get XNAT session ID, and use that to build string to move with ReST API call
             session_id  = str(session_2_move['URI'].split('/')[-1])
             queryexp    = move_exp_or_subj(session_2_move['subject_label'], project_src, project_dest,
                                            id_experiment=session_id, change_primary=True, label=None)
 
-            print("Executing ReST call on: " + f"{xnat_url}{queryexp}")
+            xnat_logger.info("Executing ReST call on: " + f"{xnat_url}{queryexp}")
 
             # # Now - actually move your data!
             # r = connect.put(f"{xnat_url}{queryexp}")
@@ -204,6 +209,6 @@ with requests.sessions.Session() as connect:
                 # print("failed - check subject information for" + session['subject_label'] + " " + session_id)
 
         else:
-            print("Sessions %s and %s have no common elements. Not moving any data." %
-                  (str(session_2_move['label_y']), str(session_2_move['label_x'])))
+            xnat_logger.debug("Sessions %s and %s have no common elements. Not moving any data." %
+                              (str(session_2_move['label_y']), str(session_2_move['label_x'])))
 
