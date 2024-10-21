@@ -201,12 +201,12 @@ with requests.sessions.Session() as connect:
 
             xnat_logger.info("Executing ReST call on: " + f"{xnat_url}{queryexp}")
 
-            # # Now - actually move your data!
-            # r = connect.put(f"{xnat_url}{queryexp}")
-            # if r.status_code == 201:
-                # print("worked - moved " + session['subject_label'] + " " + session_id + " project to" + project_dest)
-            # else :
-                # print("failed - check subject information for" + session['subject_label'] + " " + session_id)
+            # Now - actually move your data!
+            r = connect.put(f"{xnat_url}{queryexp}")
+            if r.status_code == 201:
+                xnat_logger.info("worked - moved " + session_2_move['subject_label'] + " " + session_id + " project to" + project_dest)
+            else :
+                xnat_logger.debug("failed - check subject information for" + session_2_move['subject_label'] + " " + session_id)
 
         else:
             xnat_logger.debug("Sessions %s and %s have no common elements. Not moving any data." %
