@@ -182,6 +182,10 @@ with requests.sessions.Session() as connect:
                                    how='right',
                                    on=['UID', 'subject_label', 'date'])
 
+    pandas.set_option('display.max_rows', None)
+    print(common_sessions.iloc[0:])
+    # sys.exit() # can exit here to review output, before actually moving data, as done below
+
     # Now, we can just iterate over the found common elements, and move each one, doing one final match
     # on the session/expt 'label' field (based on the MR Accession ID for that session of data). Groups
     # usually have the 'original' Accession ID, and that might get mangled by XNAT when those data were
