@@ -102,12 +102,13 @@ search_terms    = ','.join(data_2_transfer.columns.values.tolist())  # store col
 if ('subject_label' in search_terms):
    data_2_transfer['subject_label'] = data_2_transfer['subject_label'].astype(str)
 
+
 xnat_logger.debug("Keys queried: " + search_terms)
 
 
 
 # Log into XNAT instance
-user = getpass.getuser()
+user = input('Please enter your XNAT username: ')
 xnat_logger.debug("current user is {}".format(user))
 password = getpass.getpass(prompt="Please enter Password : ")
 
@@ -178,13 +179,24 @@ with requests.sessions.Session() as connect:
     # multiple columns to find matching sessions of data between the list of data being queried versus
     # what's available in source data.
 
-    common_sessions = pandas.merge(project_data_src_df, data_2_transfer,
-                                   how='right',
-                                   on=['UID', 'subject_label', 'date'])
+    search_results = pandas.merge(project_data_src_df, data_2_transfer,
+                                  how='right',
+                                  on=['UID', 'subject_label', 'date'])
+
+    # Only retain sessions with MRI data.
+    common_sessions = search_results[search_results['xsiType'] == 'xnat:mrSessionData']
 
     pandas.set_option('display.max_rows', None)
     print(common_sessions.iloc[0:])
-    # sys.exit() # can exit here to review output, before actually moving data, as done below
+    # Write out CSV (if desired) of data found in source project
+    common_sessions.to_csv('data_found_in_' + project_src + '.csv', index=True, header=True)
+
+    # Exiting here to review output, before actually moving data, as done in final code block below.
+    # To enable moving data, comment out the next 3 lines.
+    xnat_logger.debug("Closing connection to XNAT ...")
+    connect.close()
+    sys.exit()
+    # End of review results / execution block
 
     # Now, we can just iterate over the found common elements, and move each one, doing one final match
     # on the session/expt 'label' field (based on the MR Accession ID for that session of data). Groups
@@ -215,4 +227,7 @@ with requests.sessions.Session() as connect:
         else:
             xnat_logger.debug("Sessions %s and %s have no common elements. Not moving any data." %
                               (str(session_2_move['label_y']), str(session_2_move['label_x'])))
+
+    xnat_logger.debug("Closing connection to XNAT ...")
+    connect.close()
 
