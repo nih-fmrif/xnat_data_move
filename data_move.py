@@ -210,6 +210,20 @@ with requests.sessions.Session() as connect:
             xnat_logger.info("Session label %s from data query also matches with session %s in source project. Moving from source to destination." %
                              (str(session_2_move['label_y']), str(session_2_move['label_x'])))
 
+            # Create subject in destination project, if not already existing
+            if ( session_2_move['subject_label'] not in project_data_dest_df['subject_label'].astype(str) ):
+               querysub = move_exp_or_subj(session_2_move['subject_label'], project_src, project_dest,
+                                           id_experiment=None,       change_primary=True, label=None)
+               xnat_logger.info("Executing ReST call on: " + f"{xnat_url}{querysub}")
+
+               r = connect.put(f"{xnat_url}{querysub}")
+               if r.status_code == 201:
+                  xnat_logger.info ("worked - created subject " + session_2_move['subject_label'] + " in " + project_dest)
+               else :
+                  xnat_logger.debug("failed to create subject " + session_2_move['subject_label'] + " in " + project_dest)
+            else:
+               xnat_logger.info("Subject " + session_2_move['subject_label'] + " already exists in project " + project_dest)
+
             # Get XNAT session ID, and use that to build string to move with ReST API call
             session_id  = str(session_2_move['URI'].split('/')[-1])
             queryexp    = move_exp_or_subj(session_2_move['subject_label'], project_src, project_dest,
