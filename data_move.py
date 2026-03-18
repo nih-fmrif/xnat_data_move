@@ -121,7 +121,7 @@ with requests.sessions.Session() as connect:
     # test connection
     response = connect.get(connect.base_url)
     if not response.ok:
-        warnings.warn("You can't access xnat project {project_src} with the credenctials provided.")
+        warnings.warn("You can't access xnat project {project_src} with the credentials provided.")
         connect.close()
         sys.exit("Exiting program")
 
@@ -221,6 +221,8 @@ with requests.sessions.Session() as connect:
                   xnat_logger.info ("worked - created subject " + session_2_move['subject_label'] + " in " + project_dest)
                else :
                   xnat_logger.debug("failed to create subject " + session_2_move['subject_label'] + " in " + project_dest)
+                  xnat_logger.debug("skipping, and moving on to next entry")
+                  continue
             else:
                xnat_logger.info("Subject " + session_2_move['subject_label'] + " already exists in project " + project_dest)
 
