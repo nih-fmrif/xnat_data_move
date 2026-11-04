@@ -60,7 +60,9 @@ def build_create_subject_in_project_str(subject_id, project_id, label=None):
 # Code execution flow starts here:
 
 # Set up logging, instead of using print statements.
-logging.basicConfig(format='%(asctime)s %(message)s', datefmt='%Y_%m_%d %H:%M:%S', level=logging.WARNING)
+# INFO level, so each move and its outcome is reported. Failures are logged at
+# WARNING or above, so they're always visible.
+logging.basicConfig(format='%(asctime)s %(message)s', datefmt='%Y_%m_%d %H:%M:%S', level=logging.INFO)
 xnat_logger = logging.getLogger(__name__)
  
 # Parse 'projects.csv' CSV file to get XNAT host, and source and destination projects
@@ -155,7 +157,20 @@ with requests.sessions.Session() as connect:
 
     project_data_dest_df = pandas.DataFrame(project_all_data_dest.json()['ResultSet']['Result'])
 
-    xnat_logger.debug("Data queried from destination project are:\n" + str(project_data_dest_df[data_2_transfer.columns.values.tolist()]))
+    # An empty destination project returns no rows, so the frame has no columns to select.
+    if project_data_dest_df.empty:
+        xnat_logger.debug("Destination project currently has no experiments.")
+    else:
+        xnat_logger.debug("Data queried from destination project are:\n" + str(project_data_dest_df[data_2_transfer.columns.values.tolist()]))
+
+    # Subjects already owned by the destination project. This comes from the subject listing, not the
+    # experiment listing above, so subjects with no experiments are included. Subjects that are only
+    # shared into the destination have a different 'project' value, so they're excluded here and will
+    # still be moved.
+    dest_subjects = connect.get(f'{xnat_url}/data/projects/{project_dest}/subjects?columns=label,project&format=json')
+    dest_subjects.raise_for_status()
+    subjects_owned_by_dest = {str(s['label']) for s in dest_subjects.json()['ResultSet']['Result']
+                              if s.get('project') == project_dest}
 
     # So now we have (as data frames):
     #
@@ -210,38 +225,52 @@ with requests.sessions.Session() as connect:
             xnat_logger.info("Session label %s from data query also matches with session %s in source project. Moving from source to destination." %
                              (str(session_2_move['label_y']), str(session_2_move['label_x'])))
 
-            # Create subject in destination project, if not already existing
-            if ( session_2_move['subject_label'] not in project_data_dest_df['subject_label'].astype(str) ):
-               querysub = move_exp_or_subj(session_2_move['subject_label'], project_src, project_dest,
+            subject_label = str(session_2_move['subject_label'])
+
+            # Move the subject to the destination project first, unless the destination already owns it
+            # (it existed there beforehand, or an earlier session of the same subject moved it). Moving a
+            # subject does NOT move its sessions, and moving a session does NOT move its subject, so both
+            # calls are needed.
+            if subject_label not in subjects_owned_by_dest:
+               querysub = move_exp_or_subj(subject_label, project_src, project_dest,
                                            id_experiment=None,       change_primary=True, label=None)
                xnat_logger.info("Executing ReST call on: " + f"{xnat_url}{querysub}")
 
                r = connect.put(f"{xnat_url}{querysub}")
-               if r.status_code == 201:
-                  xnat_logger.info ("worked - created subject " + session_2_move['subject_label'] + " in " + project_dest)
+               # XNAT returns 200 for this call (verified on 1.8.10.5, 1.9.3.9 and 1.11), so accept any 2xx.
+               if 200 <= r.status_code < 300:
+                  xnat_logger.info("worked - moved subject " + subject_label + " to " + project_dest)
+                  subjects_owned_by_dest.add(subject_label)
                else :
-                  xnat_logger.debug("failed to create subject " + session_2_move['subject_label'] + " in " + project_dest)
-                  xnat_logger.debug("skipping, and moving on to next entry")
+                  # Don't move the session without its subject: that would leave a session in the
+                  # destination whose subject isn't there.
+                  xnat_logger.error("FAILED to move subject %s to %s (HTTP %d: %s). Skipping its session %s." %
+                                    (subject_label, project_dest, r.status_code, r.text.strip()[:300],
+                                     str(session_2_move['label_x'])))
                   continue
             else:
-               xnat_logger.info("Subject " + session_2_move['subject_label'] + " already exists in project " + project_dest)
+               xnat_logger.info("Subject " + subject_label + " already belongs to project " + project_dest)
 
             # Get XNAT session ID, and use that to build string to move with ReST API call
-            session_id  = str(session_2_move['URI'].split('/')[-1])
-            queryexp    = move_exp_or_subj(session_2_move['subject_label'], project_src, project_dest,
+            # If datasets.csv also has a URI column, the merge renames XNAT's to 'URI_x'. Always use XNAT's.
+            session_uri = session_2_move['URI_x'] if 'URI_x' in session_2_move.index else session_2_move['URI']
+            session_id  = str(session_uri).split('/')[-1]
+            queryexp    = move_exp_or_subj(subject_label, project_src, project_dest,
                                            id_experiment=session_id, change_primary=True, label=None)
 
             xnat_logger.info("Executing ReST call on: " + f"{xnat_url}{queryexp}")
 
             # Now - actually move your data!
             r = connect.put(f"{xnat_url}{queryexp}")
-            if r.status_code == 201:
-                xnat_logger.info("worked - moved " + session_2_move['subject_label'] + " " + session_id + " project to" + project_dest)
+            # XNAT returns 200 for this call too, so accept any 2xx.
+            if 200 <= r.status_code < 300:
+                xnat_logger.info("worked - moved session " + subject_label + " " + session_id + " to " + project_dest)
             else :
-                xnat_logger.debug("failed - check subject information for" + session_2_move['subject_label'] + " " + session_id)
+                xnat_logger.error("FAILED to move session %s of subject %s to %s (HTTP %d: %s)" %
+                                  (session_id, subject_label, project_dest, r.status_code, r.text.strip()[:300]))
 
         else:
-            xnat_logger.debug("Sessions %s and %s have no common elements. Not moving any data." %
+            xnat_logger.warning("Sessions %s and %s have no common elements. Not moving any data." %
                               (str(session_2_move['label_y']), str(session_2_move['label_x'])))
 
     xnat_logger.debug("Closing connection to XNAT ...")
